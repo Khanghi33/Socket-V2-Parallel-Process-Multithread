@@ -1,0 +1,9 @@
+file1.zip 5MB
+file2.zip 10MB
+file3.zip 20MB
+file4.zip 50MB
+file5.zip 100MB
+file6.zip 200MB
+file7.zip 500MB
+Barca09.jpg 22KB
+Messi1.jpg 2MB
