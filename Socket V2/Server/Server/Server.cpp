@@ -115,7 +115,7 @@ bool Send_file(int& total_bytes_send, CSocket& Server, Datafile require_file) {
     file_size = require_file.filesize;
     int n_package = option_priority(require_file.priority);
     //Create size buffer to store file data
-    const int BUFFER_SIZE = 10000;
+    const int BUFFER_SIZE = 10240;
     char buffer[BUFFER_SIZE];
     int i = 0;
     while (i < n_package && total_bytes_send < file_size) {
@@ -128,47 +128,6 @@ bool Send_file(int& total_bytes_send, CSocket& Server, Datafile require_file) {
     fin.close();
     return true;
 }
-//void SendFile(int& total_data, CSocket &Client, Datafile require_file) {
-//    string filename(require_file.filename);
-//    fstream fin("Data/" + filename, ios::in | ios::binary);
-//    if (!fin) cout << "Cannot open file!!\n";
-//    else {
-//        fin.seekg(total_data, ios::beg);
-//        int file_size, bytes_send;
-//        file_size = require_file.filesize;
-//        //Create size buffer to store file data
-//        int n_package = option_priority(require_file.priority);
-//        char buffer1[10000];
-//        char* buffer2;
-//        //Using char[] when it has still has more than 1028 bytes to upload fastly
-//        int i = 0;
-//        while (i < n_package && total_data < file_size) {
-//            if (total_data <= file_size - 10000) {
-//                //Get file data
-//                fin.read((char*)&buffer1, sizeof(buffer1));
-//                //Send file data to client
-//                bytes_send = Client.Send((char*)&buffer1, sizeof(buffer1), 0);
-//                if (bytes_send < 1) { cout << "\nCannot send " << filename << "!!\n"; break; }
-//                total_data += bytes_send;
-//                //cout << "\r" << int((total_data / float(file_size)) * 100) << "%";
-//            }
-//            //Using char* when it just has a little bit of bytes to upload exactly
-//            else {
-//                buffer2 = new char[file_size - total_data];
-//                //Get file data
-//                fin.read(buffer2, file_size - total_data);
-//                //Send file data to client
-//                bytes_send = Client.Send(buffer2, file_size - total_data, 0);
-//                if (bytes_send < 1) { cout << "\nCannot send file!!\n"; break; }
-//                total_data += bytes_send;
-//                //cout << "\r" << int((total_data / float(file_size)) * 100) << "%";
-//                break;
-//            }
-//            i++;
-//        }
-//    }
-//    fin.close();
-//}
 bool isFinish(vector<Datafile> list_download_files, vector<int> total_size) {
     int n = list_download_files.size();
     for (int i = 0; i < n; i++)
@@ -182,13 +141,6 @@ bool vector_check_exist(vector<int> vec, int val) {
         if (vec[i] == val) return true;
     return false;
 }
-//bool Send_File_data(CSocket& SocketClients, Datafile files[20], int &n_list) {
-//    int bytes_send;
-//    GetFileData(files, n_list);
-//    SocketClients.Send((char*)&n_list, sizeof(n_list), 0);
-//    bytes_send = SocketClients.Send(files, sizeof(files), 0);
-//    return true;
-//}
 int threadID = 0;
 DWORD WINAPI function_cal(LPVOID arg) {
     SOCKET* hConnected = (SOCKET*)arg;
@@ -196,8 +148,9 @@ DWORD WINAPI function_cal(LPVOID arg) {
     //Transfer back to CSocket
     Server.Attach(*hConnected);
     threadID++;
-    cout << "\r" << "Connect to client " << threadID << " successfully!!\n";
-    Server.Send((char*)&threadID, sizeof(threadID), 0);
+    int ID = threadID;
+    cout << "\r" << "Connect to client " << ID << " successfully!!\n";
+    Server.Send((char*)&ID, sizeof(ID), 0);
     Datafile files[20]; int n_list = 0;
     int bytes_send;
     GetFileData(files, n_list);
@@ -237,187 +190,12 @@ DWORD WINAPI function_cal(LPVOID arg) {
         //cout << "waiting for downloading...";
     }
     Server.Close();
-    cout << "Disconnect to Client " << threadID << " !!  \n";
+    cout << "Disconnect to Client " << ID << " !!  \n";
 
     delete hConnected;
     return 0;
     
 }
-//void MAIN(CSocket& SocketClients, int i) {
-//    cout << "\rConnect to client " << i + 1 << " successfully!!\n";
-//    SocketClients.Send((char*)&i, sizeof(i), 0);
-//    Datafile files[20]; int n_list = 0;
-//    int idx = 0; bool flag; int j;
-//    Datafile require_file[20]; int list_refile;
-//    vector<Datafile> list_download_files;
-//    vector<int> total_size;
-//    while (SocketClients.Receive((char*)&flag, sizeof(flag), 0) > 0) {
-//        //Receive require file from client to make sending
-//        SocketClients.Receive((char*)&list_refile, sizeof(list_refile), 0);
-//        SocketClients.Receive((char*)&require_file, sizeof(require_file), 0);
-//        SocketClients.Receive((char*)&idx, sizeof(idx), 0);
-//        //Check if it existed in Server data
-//        for (; idx < list_refile; idx++) {
-//            if (CheckExist(files, require_file[idx], n_list)) {
-//                list_download_files.push_back(require_file[idx]);
-//                total_size.push_back(0);
-//            }
-//            else {
-//                cout << "'" << require_file[idx].filename << "'" << " is not found!!\n";
-//            }
-//        }
-//        while (!isFinish(list_download_files, total_size)) {
-//            for (int j = 0; j < idx; j++) {
-//                SendFile(total_size[j], SocketClients, list_download_files[j]);
-//            }
-//        }
-//        //cout << "waiting for downloading...";
-//    }
-//    SocketClients.Close();
-//    cout << "Disconnect to Client " << i + 1 << " !!  \n";
-//}
-//int main()
-//{
-//    int nRetCode = 0;
-//
-//    HMODULE hModule = ::GetModuleHandle(nullptr);
-//
-//    if (hModule != nullptr)
-//    {
-//        // initialize MFC and print and error on failure
-//        if (!AfxWinInit(hModule, nullptr, ::GetCommandLine(), 0))
-//        {
-//            // TODO: code your application's behavior here.
-//            wprintf(L"Fatal Error: MFC initialization failed\n");
-//            nRetCode = 1;
-//        }
-//        else
-//        {
-//            AfxSocketInit(NULL);
-//            CSocket Server, s;
-//            DWORD threadID;
-//            HANDLE threadStatus;
-//            unsigned int port = 1234;
-//            AfxSocketInit(NULL);
-//            //Create Server
-//            if (!Server.Create(port, SOCK_STREAM, NULL)) {
-//                cout << "Cannot create Server!!\n";
-//                return nRetCode;
-//            }
-//            int i = -1;
-//            do {
-//                //Listen to clients
-//                if (!Server.Listen(5)) {
-//                    cout << " Cannot listen!!\n";
-//                    return nRetCode;
-//                }
-//                if (Server.Accept(s)) {
-//                    cout << "Connect is successfull!!\n";
-//                    i++;
-//                }
-//                SOCKET* hConnected = new SOCKET();
-//                *hConnected = s.Detach();
-//                threadStatus = CreateThread(NULL, 0, function_cal, hConnected, 0, &threadID);
-//            } while (true);
-//            getchar();
-//            Server.Close();
-//        }
-//    }
-//    else
-//    {
-//        // TODO: change error code to suit your needs
-//        wprintf(L"Fatal Error: GetModuleHandle failed\n");
-//        nRetCode = 1;
-//    }
-//    return nRetCode;
-//}
-
-//int main()
-//{
-//    int nRetCode = 0;
-//
-//    HMODULE hModule = ::GetModuleHandle(nullptr);
-//
-//    if (hModule != nullptr)
-//    {
-//        // initialize MFC and print and error on failure
-//        if (!AfxWinInit(hModule, nullptr, ::GetCommandLine(), 0))
-//        {
-//            // TODO: code your application's behavior here.
-//            wprintf(L"Fatal Error: MFC initialization failed\n");
-//            nRetCode = 1;
-//        }
-//        else
-//        {
-//            CSocket Server;
-//            unsigned int port = 1234;
-//            AfxSocketInit(NULL);
-//            //Create Server
-//            if (!Server.Create(port, SOCK_STREAM, NULL)) {
-//                cout << "Cannot create Server!!\n";
-//                return nRetCode;
-//            }
-//            if (!Server.Listen(5)) {
-//                cout << " Cannot listen!!\n";
-//                return nRetCode;
-//            }
-//            int num_clients;
-//            cout << "Input number of clients: "; cin >> num_clients;
-//            CSocket* SocketClients = new CSocket[num_clients];
-//            for (int i = 0; i < num_clients; i++) {
-//                ShowCur(0);
-//                cout << "Waiting for conection....";
-//                Server.Accept(SocketClients[i]);
-//                cout << "\r" << "Connect to client " << i + 1 << " successfully!!\n";
-//                SocketClients[i].Send((char*)&i, sizeof(i), 0);
-//                Datafile files[20]; int n_list = 0;
-//                GetFileData(files, n_list);
-//                SocketClients[i].Send((char*)&n_list, sizeof(n_list), 0);
-//                SocketClients[i].Send(files, sizeof(files), 0);
-//                int idx = 0; bool flag; int j;
-//                Datafile require_file[20]; int list_refile;
-//                vector<Datafile> list_download_files;
-//                vector<int> total_size;
-//                while (SocketClients[i].Receive((char*)&flag, sizeof(flag), 0) > 0) {
-//                    //Receive require file from client to make sending
-//                    SocketClients[i].Receive((char*)&list_refile, sizeof(list_refile), 0);
-//                    SocketClients[i].Receive((char*)&require_file, sizeof(require_file), 0);
-//                    SocketClients[i].Receive((char*)&idx, sizeof(idx), 0);
-//                    //Check if it existed in Server data
-//                    for (; idx < list_refile; idx++) {
-//                        if (CheckExist(files, require_file[idx], n_list)) {
-//                            list_download_files.push_back(require_file[idx]);
-//                            total_size.push_back(0);
-//                        }
-//                        else {
-//                            cout << "'" << require_file[idx].filename << "'" << " is not found!!\n";
-//                        }
-//                    }
-//                    while (!isFinish(list_download_files, total_size)) {
-//                        for (int j = 0; j < idx; j++) {
-//                            SendFile(total_size[j], SocketClients[i], list_download_files[j]);
-//                        }
-//                    }
-//                    //cout << "waiting for downloading...";
-//                }
-//                SocketClients[i].Close();
-//                cout << "Disconnect to Client " << i + 1 << " !!  \n";
-//            }
-//            getchar();
-//            delete[] SocketClients;
-//            Server.Close();
-//            getchar();
-//            Server.Close();
-//        }
-//    }
-//    else
-//    {
-//        // TODO: change error code to suit your needs
-//        wprintf(L"Fatal Error: GetModuleHandle failed\n");
-//        nRetCode = 1;
-//    }
-//    return nRetCode;
-//}
 int _tmain(int argc, TCHAR* argv[], TCHAR* envp[])
 {
     int nRetCode = 0;

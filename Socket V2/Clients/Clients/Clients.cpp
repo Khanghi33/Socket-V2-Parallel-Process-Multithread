@@ -85,7 +85,9 @@ void GetinfoInputFile(Datafile require_file[], int& n) {
 void update_list_files(Datafile require_file[20], int &list_refile) {
     while (true) {
         //Get info all file need to be download from input file
-        GetinfoInputFile(require_file, list_refile);
+        {
+            lock_guard<mutex> lock(mtx);  GetinfoInputFile(require_file, list_refile);
+        }
         Sleep(2000);
     }
 }
@@ -118,7 +120,7 @@ bool Receive_file(int idx, int n_file, int& total_bytes_recv, CSocket& Client, D
     file_size = require_file.filesize;
     int n_package = option_priority(require_file.priority);
     //Create buffer
-    const int BUFFER_SIZE = 10000;
+    const int BUFFER_SIZE = 10240;
     char buffer[BUFFER_SIZE];
     //Open file to store data
     fstream fout("Data/" + filename, ios::app | ios::binary);
@@ -136,45 +138,6 @@ bool Receive_file(int idx, int n_file, int& total_bytes_recv, CSocket& Client, D
     fout.close();
     return true;
 }
-//void DownloadFile(int idx, int n_file, int& total_data, CSocket& Client, Datafile require_file) {
-//    string filename(require_file.filename);
-//    int file_size, bytes_receive = 0;
-//    file_size = require_file.filesize;
-//    int n_package = option_priority(require_file.priority);
-//    char buffer1[10000];
-//    char* buffer2;
-//    //Create a new file to store data
-//    fstream fout("Data/" + filename, ios::app | ios::binary);
-//    fout.seekp(total_data, ios::beg);
-//    //Using char[] when it has still has more than 1024 bytes to download fastly
-//    int i = 0;
-//    while (i < n_package && total_data < file_size) {
-//        if (total_data <= file_size - 10000) {
-//            //Recieve file data from Server
-//            bytes_receive = Client.Receive((char*)&buffer1, sizeof(buffer1), 0);
-//            if (bytes_receive < 1) { cout << "\nCannot download " << filename << "!!\n"; break; }
-//            //Store data to new file
-//            fout.write((char*)&buffer1, sizeof(buffer1));
-//            total_data += bytes_receive;
-//            //Print percent downloading
-//            Goto(0, idx + n_file + 4);  cout << "Downloading " << filename << "..." << int((total_data / float(file_size)) * 100) << "%";
-//        }
-//        //Using char* when it just has a little bit of bytes to dowload exactly
-//        else {
-//            buffer2 = new char[file_size - total_data];
-//            //Recieve file data from Server
-//            bytes_receive = Client.Receive(buffer2, file_size - total_data, 0);
-//            if (bytes_receive < 1) { cout << "\nCannot download " << filename << "!!\n"; break; }
-//            //Store data to new file
-//            fout.write(buffer2, file_size - total_data);
-//            total_data += bytes_receive;
-//            //Print percent downloading
-//            Goto(0, idx + n_file + 4);  cout << "Downloading " << filename << "..." << int((total_data / float(file_size)) * 100) << "%";
-//            break;
-//        }
-//        i++;
-//    }
-//}
 bool isFinish(vector<Datafile> list_download_files, vector<int> total_size) {
     int n = list_download_files.size();
     for (int i = 0; i < n; i++)
@@ -182,51 +145,6 @@ bool isFinish(vector<Datafile> list_download_files, vector<int> total_size) {
             return false;
     return true;
 }
-//Download file
-//void RecieveFile(int idx, int n_file, CSocket& Client, Datafile require_file) {;
-//        string filename(require_file.filename);
-//        ShowCur(0);
-//        int file_size, bytes_recieve;
-//        //Recieve file size from server
-//        bytes_recieve = Client.Receive((char*)&file_size, sizeof(file_size), 0);
-//        int package_size = option_priority(require_file.priority);
-//        char buffer1[1024];
-//        char* buffer2;
-//        if (bytes_recieve != sizeof(file_size)) { cout << "Cannot download!!\n"; return; }
-//        //Create a new file to store data
-//        fstream fout("Data/" + filename, ios::out | ios::binary);
-//        int total_data = 0;
-//        while (total_data < file_size) {
-//            if (mtx.try_lock_for(chrono::milliseconds(100))) {
-//                //Using char[] when it has still has more than 1028 bytes to download fastly
-//                if (total_data <= file_size - 1024) {
-//                    //Recieve file data from Server
-//                    bytes_recieve = Client.Receive((char*)&buffer1, sizeof(buffer1), 0);
-//                    if (bytes_recieve < 1) { cout << "\nCannot download!!\n"; return; }
-//                    //Store data to new file
-//                    fout.write((char*)&buffer1, sizeof(buffer1));
-//                    total_data += bytes_recieve;
-//                    //Print percent downloading
-//                    Goto(0, idx + n_file + 4);  cout << "Downloading " << filename << "..." << int((total_data / float(file_size)) * 100) << "%";
-//                }
-//                //Using char* when it just has a little bit of bytes to dowload exactly
-//                else {
-//                    buffer2 = new char[file_size - total_data];
-//                    //Recieve file data from Server
-//                    bytes_recieve = Client.Receive(buffer2, file_size - total_data, 0);
-//                    if (bytes_recieve < 1) { cout << "\nCannot download!!\n"; return; }
-//                    //Store data to new file
-//                    fout.write(buffer2, file_size - total_data);
-//                    total_data += bytes_recieve;
-//                    //Print percent downloading
-//                    Goto(0, idx + n_file + 4);  cout << "Downloading " << filename << "..." << int((total_data / float(file_size)) * 100) << "%";
-//                }
-//            } 
-//        }
-//        cout << endl;
-//        fout.close();
-//        mtx.unlock();
-//}
 bool vector_check_exist(vector<int> vec, int val) {
     int n = vec.size();
     for (int i = 0; i < n; i++)
@@ -237,96 +155,6 @@ void printdata(Datafile require_file[20], int& list_refile) {
     for (int i = 0; i < list_refile; i++)
         cout << require_file[i].filename << " " << require_file[i].priority << endl;
 }
-//int main()
-//{
-//    int nRetCode = 0;
-//
-//    HMODULE hModule = ::GetModuleHandle(nullptr);
-//
-//    if (hModule != nullptr)
-//    {
-//        // initialize MFC and print and error on failure
-//        if (!AfxWinInit(hModule, nullptr, ::GetCommandLine(), 0))
-//        {
-//            // TODO: code your application's behavior here.
-//            wprintf(L"Fatal Error: MFC initialization failed\n");
-//            nRetCode = 1;
-//        }
-//        else
-//        {
-//            CSocket Client;
-//            char ipAdd[100];
-//            unsigned int port = 1234;
-//            AfxSocketInit(NULL);
-//            Client.Create();
-//            //cout << "Input Server ip: "; cin.getline(ipAdd, 100);
-//            //Set connection to ip Address
-//            if (Client.Connect(CA2W("127.0.0.1"), port)) {
-//                cout << "Client has been connected!!\n";
-//                int id;
-//                //Receive the number of being client
-//                Client.Receive((char*)&id, sizeof(id), 0);
-//                cout << "Client's id: " << id << endl;
-//                //Receive info of file can be downloaded
-//                Datafile files[20]; int n_list;
-//                Client.Receive((char*)&n_list, sizeof(n_list), 0);
-//                Client.Receive((char*)&files, sizeof(files), 0);
-//                cout << "List of file can be downloaded:\n";
-//                for (int i = 0; i < n_list; i++)
-//                    cout << files[i].filename << " " << files[i].size << " " << files[i].filesize << endl;
-//                signal(SIGINT, signal_callback_handler);
-//                //Using idx add the number of file which had been downloaded from server
-//                //So, Client had't to download them again
-//                int idx = 0;
-//                //Real time downloading
-//                Datafile require_file[20]; int list_refile;
-//                vector<Datafile> list_download_files;
-//                vector<int> total_size;
-//                GetinfoInputFile(require_file, list_refile);
-//                thread update_file(update_list_files, require_file, ref(list_refile));
-//                update_file.detach();
-//                while (true) {
-//                    //Using flag to transfer signal when Clients is exit
-//                    bool flag = 0; Client.Send((char*)&flag, sizeof(flag), 0);
-//                    //Get info all file need to be download from input file, update 2s each time
-//                    //Send require file to server to ask for downloading
-//                    Client.Send((char*)&list_refile, sizeof(list_refile), 0);
-//                    Client.Send((char*)&require_file, sizeof(require_file), 0);
-//                    Client.Send((char*)&idx, sizeof(idx), 0);
-//                    //Check if it existed in Server data
-//                    for (; idx < list_refile; idx++) {
-//                        if (CheckExist_Getsize(files, require_file[idx], n_list)) {
-//                            list_download_files.push_back(require_file[idx]);
-//                            total_size.push_back(0);
-//                        }
-//                        else {
-//                            Goto(0, idx + 4 + n_list);  cout << "'" << require_file[idx].filename << "'" << " is not found!!\n";
-//                        }
-//                    }
-//                    while (!isFinish(list_download_files, total_size)) {
-//                        for (int i = 0; i < idx; i++) {
-//                            DownloadFile(i, n_list, total_size[i], Client, list_download_files[i]);
-//                        }
-//                    }
-//                    
-//                    Goto(0, idx + 4 + n_list); cout << "waiting for downloading...";
-//                    Sleep(1000);
-//                }
-//                Client.ShutDown(2);
-//                Client.Close();
-//            }
-//            else cout << "Cannot connect to server :(( \n";
-//        }   
-//    }
-//    else
-//    {
-//        // TODO: change error code to suit your needs
-//        wprintf(L"Fatal Error: GetModuleHandle failed\n");      
-//        nRetCode = 1;
-//    }
-//
-//    return nRetCode;
-//}
 int _tmain(int argc, TCHAR* argv[], TCHAR* envp[])
 {
     int nRetCode = 0;
